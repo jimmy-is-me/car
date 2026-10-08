@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyState,fuelStats,mergeStates,reminderStatus,validateState,csvCell} from '../core.js';
+import {emptyState,fuelStats,mergeStates,reminderStatus,validateState,csvCell,addMonths,nextServiceDue} from '../core.js';
 const fuel=(id,odometer,liters,full=true,missed=false)=>({id,date:'2026-10-01',type:'fuel',odometer,liters,full,missed});
 test('full tank calculation excludes first fill and accumulates partial fills',()=>{const s=fuelStats([fuel('a',1000,40),fuel('b',1200,15,false),fuel('c',1500,25)]);assert.equal(s.kmL,12.5);assert.equal(s.l100,8);assert.equal(s.distance,500);});
 test('single or partial fill cannot produce an economy estimate',()=>{assert.equal(fuelStats([fuel('a',1000,30)]).kmL,null);assert.equal(fuelStats([fuel('a',1000,30,false),fuel('b',1400,30)]).kmL,null);});
@@ -12,3 +12,5 @@ test('revision gives deterministic tie-break and merge is idempotent',()=>{const
 test('reminders trigger on either date or mileage and respect completion',()=>{assert.equal(reminderStatus({dueDate:'2026-10-08',dueKm:100000},100,'2026-10-08'),'overdue');assert.equal(reminderStatus({dueDate:'2027-10-08',dueKm:1000},1001,'2026-10-08'),'overdue');assert.equal(reminderStatus({dueKm:2000},1100,'2026-10-08'),'soon');assert.equal(reminderStatus({dueDate:'2026-12-09'},0,'2026-10-08'),'normal');assert.equal(reminderStatus({done:true,dueKm:1},100,'2026-10-08'),'done');});
 test('backup rejects unsupported and invalid data',()=>{assert.throws(()=>validateState({schema:2}));assert.throws(()=>validateState({...emptyState(),records:[{id:'r',revision:'a',updatedAt:1,type:'fuel',date:'2026-02-31',vehicleId:'v',cost:10,odometer:100,liters:0}]}));assert.deepEqual(validateState(emptyState()),emptyState());});
 test('CSV escapes quotes and formula injection',()=>{assert.equal(csvCell('=1+1'),'"\'=1+1"');assert.equal(csvCell('a"b'),'"a""b"');});
+test('service schedule respects calendar month ends and either due threshold',()=>{assert.equal(addMonths('2026-01-31',1),'2026-02-28');assert.deepEqual(nextServiceDue({date:'2026-01-31',odometer:75000,intervalMonths:6,intervalKm:10000}),{dueDate:'2026-07-31',dueKm:85000});assert.equal(reminderStatus({dueDate:'2026-07-31',dueKm:85000},85000,'2026-06-01'),'overdue');});
+test('tax insurance and tire records validate as first-class entries',()=>{const state=emptyState();for(const type of ['tax','insurance','tire','inflation','battery'])state.records.push({id:type,revision:'rev',updatedAt:1,type,vehicleId:'v',date:'2026-10-08',cost:0,odometer:75000});assert.deepEqual(validateState(state),state);});

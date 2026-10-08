@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {Store} from '../store.js';
 import {DriveSync} from '../sync.js';
 import {live} from '../core.js';
-class Storage { constructor(){this.data=new Map();} getItem(k){return this.data.get(k)||null;} setItem(k,v){this.data.set(k,v);} }
+class Storage { constructor(){this.data=new Map();} getItem(k){return this.data.get(k)||null;} setItem(k,v){this.data.set(k,v);} removeItem(k){this.data.delete(k);} }
+globalThis.localStorage=new Storage();
+globalThis.sessionStorage=new Storage();
 Object.defineProperty(globalThis,'navigator',{value:{onLine:true},configurable:true});
 const makeStore=()=>{const s=new Store(()=>{},new Storage());s.switchAccount('account-a');return s;};
 const makeSync=store=>{const statuses=[];const s=new DriveSync(store,(state,message)=>statuses.push({state,message}),()=>{});s.token='test';s.expires=Date.now()+3600000;s.statuses=statuses;return s;};
@@ -27,3 +29,27 @@ test('guest and Google accounts have independent local state',()=>{const a=new S
 test('quota errors do not discard the previous state',()=>{const disk=new Storage(),a=new Store(()=>{},disk);newVehicle(a,'a','A');disk.setItem=()=>{throw new DOMException('Quota','QuotaExceededError');};assert.throws(()=>newVehicle(a,'b','B'));assert.equal(a.state.vehicles.length,1);assert.equal(a.pending.length,1);});
 test('expired tokens retain local pending edits and request reauthorization',async()=>{drive();const a=makeStore(),s=makeSync(a);newVehicle(a,'a','A');s.expires=Date.now()-1000;await s.sync();assert.equal(a.pending.length,1);assert.equal(s.token,null);assert.match(s.statuses.at(-1).message,/授權已到期/);});
 test('logout during an in-flight request cannot merge into guest state',async()=>{drive();const a=makeStore(),s=makeSync(a);newVehicle(a,'a','A');let release;globalThis.fetch=()=>new Promise(r=>release=r);const pending=s.sync();s.logout();release(Response.json({files:[]}));await pending;assert.equal(a.key,'car-manager:guest');assert.equal(a.state.vehicles.length,0);});
+test('refresh restores a verified Google session and its account data',async()=>{
+  localStorage.data.clear();sessionStorage.data.clear();
+  localStorage.setItem('car-manager:last-account',JSON.stringify({sub:'account-a',email:'owner@example.com'}));
+  sessionStorage.setItem('car-manager:session',JSON.stringify({sub:'account-a',token:'valid',expires:Date.now()+3600000}));
+  const accountStore=new Store(()=>{},new Storage()),events=[];
+  globalThis.fetch=async url=>String(url).includes('userinfo')?Response.json({sub:'account-a',email:'owner@example.com'}):Response.json({files:[]});
+  const sync=new DriveSync(accountStore,(status,message)=>events.push({status,message}),()=>{});
+  await sync.restore();
+  assert.equal(accountStore.key,'car-manager:google:account-a');
+  assert.equal(sync.token,'valid');
+  assert.equal(sync.account.email,'owner@example.com');
+  assert.equal(events.at(-1).status,'synced');
+});
+test('expired session retains selected account and requests reconnection',async()=>{
+  localStorage.data.clear();sessionStorage.data.clear();
+  localStorage.setItem('car-manager:last-account',JSON.stringify({sub:'account-a',email:'owner@example.com'}));
+  sessionStorage.setItem('car-manager:session',JSON.stringify({sub:'account-a',token:'expired',expires:Date.now()-1000}));
+  const accountStore=new Store(()=>{},new Storage()),events=[];
+  const sync=new DriveSync(accountStore,(status,message)=>events.push({status,message}),()=>{});
+  await sync.restore();
+  assert.equal(accountStore.key,'car-manager:google:account-a');
+  assert.equal(sync.token,null);
+  assert.match(events.at(-1).message,/繼續同步/);
+});

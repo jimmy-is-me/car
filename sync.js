@@ -5,6 +5,20 @@ const SCOPE='https://www.googleapis.com/auth/drive.appdata';
 // Immutable operation files prevent one device overwriting another device's snapshot.
 export class DriveSync {
   constructor(store,onStatus,onAccount) { this.store=store; this.onStatus=onStatus; this.onAccount=onAccount; this.cache=new Map(); this.token=null; this.account=null; this.running=false; this.generation=0; }
+  async restore() {
+    let saved, session;
+    try { saved=JSON.parse(localStorage.getItem('car-manager:last-account')||'null'); session=JSON.parse(sessionStorage.getItem('car-manager:session')||'null'); } catch { return; }
+    if(!saved?.sub) return;
+    try { this.store.switchAccount(saved.sub); } catch { return; }
+    this.account=saved; this.onAccount(saved);
+    if(!session || session.sub!==saved.sub || session.expires<Date.now()+30000) { this.onStatus('ready','已登入 · 按此繼續同步'); return; }
+    try {
+      const response=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+session.token},signal:AbortSignal.timeout(15000)});
+      const verified=response.ok?await response.json():null;
+      if(!verified || verified.sub!==saved.sub) throw new Error('驗證已到期');
+      this.token=session.token; this.expires=session.expires; this.onStatus('ready','已恢復 Google 同步'); await this.sync();
+    } catch { sessionStorage.removeItem('car-manager:session'); this.onStatus('ready','已登入 · 按此繼續同步'); }
+  }
   login() {
     if(!window.google?.accounts?.oauth2) throw new Error('Google 登入尚未載入，請檢查網路後重試');
     const generation=this.generation;
@@ -20,19 +34,21 @@ export class DriveSync {
           if(generation!==this.generation) return;
           this.generation++; this.cache.clear();
           this.store.switchAccount(account.sub); this.account=account; this.token=result.access_token; this.expires=Date.now()+Number(result.expires_in)*1000;
+          localStorage.setItem('car-manager:last-account',JSON.stringify({sub:account.sub,email:account.email,name:account.name}));
+          sessionStorage.setItem('car-manager:session',JSON.stringify({sub:account.sub,token:this.token,expires:this.expires}));
           this.onAccount(account); this.onStatus('ready','等待同步'); await this.sync();
         } catch(e) { this.onStatus('error',e.message); }
       },error_callback:()=>this.onStatus('error','登入視窗已關閉或被阻擋，請再按一次登入')});
-    client.requestAccessToken({prompt:'select_account'});
+    client.requestAccessToken({prompt:this.account?'':'select_account'});
   }
-  logout() { this.generation++; this.token=null; this.account=null; this.cache.clear(); this.store.switchAccount(null); this.onAccount(null); this.onStatus('local','本機模式'); }
+  logout() { this.generation++; this.token=null; this.account=null; this.cache.clear(); localStorage.removeItem('car-manager:last-account'); sessionStorage.removeItem('car-manager:session'); this.store.switchAccount(null); this.onAccount(null); this.onStatus('local','本機模式'); }
   async request(url,options={},generation=this.generation) {
     if(generation!==this.generation) throw new Error('帳號已切換');
-    if(!this.token || Date.now()>=this.expires-30000) { this.token=null; throw new Error('Google 授權已到期，請重新登入以繼續同步'); }
+    if(!this.token || Date.now()>=this.expires-30000) { this.token=null; sessionStorage.removeItem('car-manager:session'); throw new Error('Google 授權已到期，請按此繼續同步'); }
     const res=await fetch(url,{...options,headers:{...options.headers,Authorization:'Bearer '+this.token},signal:AbortSignal.timeout(30000)});
     if(generation!==this.generation) throw new Error('帳號已切換');
     if(!res.ok) {
-      if(res.status===401) { this.token=null; throw new Error('Google 授權已到期，請重新登入'); }
+      if(res.status===401) { this.token=null; sessionStorage.removeItem('car-manager:session'); throw new Error('Google 授權已到期，請按此繼續同步'); }
       if(res.status===403) throw new Error('Google Drive 存取被拒絕，請確認已啟用 API 與授權範圍');
       throw new Error('雲端同步失敗（'+res.status+'），資料已保留在本機，稍後重試');
     }

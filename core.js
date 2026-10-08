@@ -37,6 +37,17 @@ export function fuelStats(records) {
   return {intervals, distance, liters:fuel, kmL:fuel>0?distance/fuel:null, l100:distance>0?fuel/distance*100:null};
 }
 export function mileage(vehicle, records) { return Math.max(Number(vehicle?.odometer)||0,...records.filter(r=>!r.deleted).map(r=>Number(r.odometer)||0)); }
+export function addMonths(date, months) {
+  if (!date || !Number.isInteger(months) || months < 1) return '';
+  const [year, month, day] = date.split('-').map(Number);
+  const target = new Date(Date.UTC(year, month - 1 + months, 1));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(day, last));
+  return target.toISOString().slice(0, 10);
+}
+export function nextServiceDue({date = '', odometer = 0, intervalMonths = 0, intervalKm = 0}) {
+  return {dueDate: intervalMonths && date ? addMonths(date, intervalMonths) : '', dueKm: intervalKm && odometer!==null && odometer!=='' && Number.isFinite(Number(odometer)) ? Number(odometer) + Number(intervalKm) : 0};
+}
 export function reminderStatus(reminder, odometer, date = today()) {
   if(reminder.done) return 'done';
   const days = reminder.dueDate ? Math.round((Date.parse(reminder.dueDate+'T00:00:00Z')-Date.parse(date+'T00:00:00Z'))/86400000) : Infinity;
@@ -57,12 +68,12 @@ export function validateState(value) {
     if(x.deleted) continue;
     if(k==='vehicles' && (typeof x.name!=='string' || !x.name.trim() || !num(x.odometer))) throw new Error('車輛資料錯誤');
     if(k!=='vehicles' && !identifier(x.vehicleId)) throw new Error('缺少車輛識別碼');
-    if(k==='records' && (!['fuel','charge','maintenance','expense','trip'].includes(x.type) || !dateOk(x.date) || !num(x.cost) || !num(x.odometer))) throw new Error('紀錄欄位錯誤');
+    if(k==='records' && (!['fuel','charge','maintenance','expense','trip','tax','insurance','tire','inflation','battery'].includes(x.type) || !dateOk(x.date) || !num(x.cost) || !num(x.odometer))) throw new Error('紀錄欄位錯誤');
     if(k==='records' && x.type==='fuel' && (!num(x.liters) || x.liters<=0 || typeof x.full!=='boolean' || typeof x.missed!=='boolean')) throw new Error('加油資料錯誤');
     if(k==='records' && x.type==='charge' && (!num(x.kwh) || x.kwh<=0)) throw new Error('充電資料錯誤');
     if(k==='records' && x.type==='trip' && (!num(x.distance) || x.distance<=0)) throw new Error('行程資料錯誤');
     if(k==='records' && x.type==='maintenance' && (!Array.isArray(x.items) || !x.items.length || x.items.some(v=>typeof v!=='string'))) throw new Error('保養項目格式錯誤');
-    if(k==='reminders' && (typeof x.title!=='string' || !x.title.trim() || (!x.dueDate && !x.dueKm) || (x.dueDate && !dateOk(x.dueDate)) || (x.dueKm && !num(x.dueKm)))) throw new Error('提醒資料錯誤');
+    if(k==='reminders' && (typeof x.title!=='string' || !x.title.trim() || (!x.dueDate && !x.dueKm) || (x.dueDate && !dateOk(x.dueDate)) || (x.dueKm && !num(x.dueKm)) || (x.intervalKm && !num(x.intervalKm)) || (x.intervalMonths && !num(x.intervalMonths)))) throw new Error('提醒資料錯誤');
   }
   return value;
 }
