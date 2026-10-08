@@ -34,10 +34,18 @@ function cardPhoto(v){const photo=vehiclePhoto(v);return photo?'<div class="vehi
 async function resizeVehiclePhoto(file){
   if(!file.type.startsWith('image/'))throw new Error('請選擇圖片檔');
   if(file.size>10000000)throw new Error('圖片請小於 10 MB');
-  const bitmap=await createImageBitmap(file),canvas=document.createElement('canvas'),scale=Math.min(1,640/Math.max(bitmap.width,bitmap.height));
-  canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
-  canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
-  for(const quality of [.76,.62,.48]){const data=canvas.toDataURL('image/jpeg',quality);if(data.length<=190000)return data;}
+  const bitmap=await createImageBitmap(file),canvas=document.createElement('canvas');
+  try{
+    for(const edge of [960,800,640]){
+      const scale=Math.min(1,edge/Math.max(bitmap.width,bitmap.height));
+      canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
+      canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);
+      for(const quality of [.82,.7,.56]){
+        const data=canvas.toDataURL('image/jpeg',quality);
+        if(data.length<=300000)return data;
+      }
+    }
+  }finally{bitmap.close();}
   throw new Error('圖片仍太大，請選擇較小的照片');
 }
 function vehicle(){const list=vehicles();return list.find(x=>x.id===selected)||list[0];}

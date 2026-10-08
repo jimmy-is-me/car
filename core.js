@@ -64,10 +64,10 @@ export function validateState(value) {
   const identifier = v => typeof v==='string' && /^[A-Za-z0-9_-]{1,128}$/.test(v);
   for (const k of COLLECTIONS) for(const x of value[k]) {
     if(!x || !identifier(x.id) || !num(x.updatedAt) || !identifier(x.revision)) throw new Error('紀錄識別資訊不完整');
-    if(Object.entries(x).some(([key,v])=>typeof v==='string' && v.length>(key==='photo'?200000:10000))) throw new Error('文字欄位過長');
+    if(Object.entries(x).some(([key,v])=>typeof v==='string' && v.length>(key==='photo'?300000:10000))) throw new Error('文字欄位過長');
     if(x.deleted) continue;
     if(k==='vehicles' && (typeof x.name!=='string' || !x.name.trim() || !num(x.odometer))) throw new Error('車輛資料錯誤');
-    if(k==='vehicles' && x.photo && (typeof x.photo!=='string' || !/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(x.photo) || x.photo.length>200000)) throw new Error('車輛圖片格式錯誤');
+    if(k==='vehicles' && x.photo && (typeof x.photo!=='string' || !/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(x.photo) || x.photo.length>300000)) throw new Error('車輛圖片格式錯誤');
     if(k==='vehicles' && x.color && !['teal','blue','copper','violet','forest','rose'].includes(x.color)) throw new Error('車輛主題色錯誤');
     if(k!=='vehicles' && !identifier(x.vehicleId)) throw new Error('缺少車輛識別碼');
     if(k==='records' && (!['fuel','charge','maintenance','expense','trip','odometer','tax','insurance','tire','inflation','battery'].includes(x.type) || !dateOk(x.date) || !num(x.cost) || !num(x.odometer))) throw new Error('紀錄欄位錯誤');

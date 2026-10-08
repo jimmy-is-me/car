@@ -19,5 +19,8 @@ test('vehicle color and compressed photo survive backup validation',()=>{
   state.vehicles.push({id:'car2',revision:'rev',updatedAt:1,name:'第二台車',odometer:500,color:'blue',photo:'data:image/jpeg;base64,/9j/'});
   state.records.push({id:'reading',revision:'rev',updatedAt:2,type:'odometer',vehicleId:'car2',date:'2026-10-08',cost:0,odometer:900});
   assert.deepEqual(validateState(state),state);
+  const sharpPhoto='data:image/jpeg;base64,'+'A'.repeat(250000);
+  assert.deepEqual(validateState({...state,vehicles:[{...state.vehicles[0],photo:sharpPhoto}]}).vehicles[0].photo,sharpPhoto);
+  assert.throws(()=>validateState({...state,vehicles:[{...state.vehicles[0],photo:'data:image/jpeg;base64,'+'A'.repeat(300000)}]}),/文字欄位過長/);
   assert.throws(()=>validateState({...state,vehicles:[{...state.vehicles[0],photo:'data:image/svg+xml;base64,AAAA'}]}),/圖片格式/);
 });
