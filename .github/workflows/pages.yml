@@ -25,7 +25,7 @@ jobs:
       - name: Prepare static website
         run: |
           mkdir dist
-          cp index.html styles.css app.js core.js store.js sync.js sw.js privacy.html manifest.webmanifest dist/
+          cp index.html styles.css app.js core.js store.js sync.js sw.js privacy.html manifest.webmanifest _headers dist/
           cp -r assets dist/assets
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

@@ -212,7 +212,25 @@ document.addEventListener('change',async e=>{
   }catch(error){$('#form-error').textContent=error.message;}finally{save.disabled=false;}
 });
 setInterval(()=>void sync.sync(),30000);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+if('serviceWorker'in navigator){
+  const hadController=Boolean(navigator.serviceWorker.controller);
+  let updatePending=false;
+  const reloadUpdatedPage=()=>{if(!updatePending||$('#editor').open)return;updatePending=false;location.reload();};
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!hadController)return;
+    updatePending=true;
+    if($('#editor').open)toast('網站已有新版本，完成編輯後會自動更新');
+    reloadUpdatedPage();
+  });
+  $('#editor').addEventListener('close',reloadUpdatedPage);
+  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(registration=>{
+    const check=()=>{if(navigator.onLine)void registration.update().catch(()=>{});};
+    check();
+    window.addEventListener('focus',check);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)check();});
+    setInterval(check,60000);
+  }).catch(()=>{});
+}
 render();
 
 void sync.restore();

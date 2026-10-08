@@ -1,0 +1,29 @@
+/
+  Cache-Control: no-store, max-age=0
+  Cloudflare-CDN-Cache-Control: no-store
+
+/index.html
+  Cache-Control: no-store, max-age=0
+  Cloudflare-CDN-Cache-Control: no-store
+
+/sw.js
+  Cache-Control: no-store, max-age=0
+  Cloudflare-CDN-Cache-Control: no-store
+
+/app.js
+  Cache-Control: no-store, max-age=0
+
+/core.js
+  Cache-Control: no-store, max-age=0
+
+/store.js
+  Cache-Control: no-store, max-age=0
+
+/sync.js
+  Cache-Control: no-store, max-age=0
+
+/styles.css
+  Cache-Control: no-store, max-age=0
+
+/privacy.html
+  Cache-Control: no-store, max-age=0

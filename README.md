@@ -26,6 +26,14 @@
 2. 預期網址：`https://jimmy-is-me.github.io/car/`。實際部署狀態以 GitHub Actions 結果為準。
 3. 網頁使用相對路徑，可改放其他 HTTPS 靜態主機。
 
+## Cloudflare Pages 自訂網域與更新
+
+Cloudflare Pages 若連接此儲存庫的 `main`，推送後應由 Cloudflare 自己完成部署；GitHub Pages 的工作流程只部署 `github.io`，不會替 Cloudflare 發布。請在 Cloudflare Pages 的「部署」確認最新 commit 已成功。
+
+根目錄的 `_headers` 為入口頁、程式檔和 Service Worker 指定不使用舊版 HTTP 快取。網站每分鐘、重新取得焦點和重新開啟時會檢查新 Service Worker；新版啟用後自動重新整理，若正在編輯資料則等對話框關閉。離線時仍使用已儲存的網站檔案；此更新不會刪除車輛資料或 Google 登入。
+
+若 `pages.dev` 已是新版但自訂網域仍顯示舊版，檢查網域的 Cloudflare Cache Rules / Page Rules 是否有「Cache Everything」或忽略來源快取標頭的設定；應排除本網站或移除該規則。既有的舊快取可在該網域的 **Caching → Configuration → Purge Cache** 清除。Cloudflare Pages 專案中的「清除建置快取」只影響下次建置速度，不是訪客看到的 CDN 快取。清除 CDN 快取不會清除使用者瀏覽器的車輛資料。
+
 ## Google 同步必須完成的專案設定
 
 用戶端 ID 已設於 `sync.js`：
