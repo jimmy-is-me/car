@@ -23,7 +23,12 @@ const themes={
   copper:{accent:'#aa6737',deep:'#573621',soft:'#fbefe5'},
   violet:{accent:'#7254a8',deep:'#382853',soft:'#f2edfa'},
   forest:{accent:'#39764e',deep:'#193f2c',soft:'#eaf5ec'},
-  rose:{accent:'#ad5372',deep:'#552c3d',soft:'#faedf2'}
+  rose:{accent:'#ad5372',deep:'#552c3d',soft:'#faedf2'},
+  slate:{accent:'#586b78',deep:'#27343d',soft:'#edf1f3'},
+  graphite:{accent:'#444b51',deep:'#1b2024',soft:'#eef0f1'},
+  black:{accent:'#282a2d',deep:'#111315',soft:'#f0f0f0'},
+  silver:{accent:'#75858c',deep:'#37464c',soft:'#f1f4f5'},
+  gold:{accent:'#9b7535',deep:'#4b3a20',soft:'#f8f2e5'}
 };
 const themeKeys=Object.keys(themes);
 function vehicleTheme(v){return themes[v?.color]||themes[themeKeys[Math.max(0,vehicles().findIndex(x=>x.id===v?.id))%themeKeys.length]];}
@@ -92,7 +97,7 @@ function showEditor(title,body,collection,id){editing={collection,id};$('#dialog
 function editVehicle(id){
   const v=vehicles().find(x=>x.id===id)||{},color=v.color||themeKeys[vehicles().length%themeKeys.length];
   const photo='<div class="vehicle-photo-field"><div id="vehicle-photo-preview" class="vehicle-photo-preview">'+(vehiclePhoto(v)?'<img src="'+esc(vehiclePhoto(v))+'" alt="車輛照片預覽">':icon('vehicles',30))+'</div><div><strong>車輛照片</strong><p>可選擇自己的愛車照片。會縮小後與車輛資料一同備份及同步。</p><label class="photo-upload">選擇照片<input id="vehicle-photo-file" type="file" accept="image/*" hidden></label><button type="button" class="photo-remove" data-action="remove-photo">移除照片</button></div></div>';
-  const colorNames={teal:'青綠',blue:'海藍',copper:'暖銅',violet:'紫羅蘭',forest:'森林綠',rose:'玫瑰'};
+  const colorNames={teal:'青綠',blue:'海藍',copper:'暖銅',violet:'紫羅蘭',forest:'森林綠',rose:'玫瑰',slate:'石板灰',graphite:'石墨灰',black:'黑色',silver:'銀灰',gold:'香檳金'};
   const colors='<fieldset class="theme-choice"><legend>車輛主題色</legend>'+themeKeys.map(key=>'<label><input type="radio" name="color" aria-label="'+colorNames[key]+'" value="'+key+'" '+(color===key?'checked':'')+'><span style="--swatch:'+themes[key].accent+'"></span></label>').join('')+'</fieldset>';
   const basic=field('車輛名稱 *','name',v.name,'text','required maxlength="80" placeholder="例如：我的 Corolla"')+field('車牌','plate',v.plate,'text','maxlength="20"')+field('廠牌','brand',v.brand,'text','maxlength="60"')+field('車型','model',v.model,'text','maxlength="80"')+field('年份','year',v.year||'','number','min="1900" max="2100" step="1"')+selectField('動力類型','power',['汽油','柴油','油電','插電式油電','純電'],v.power||'汽油')+field('起始里程 (km) *','odometer',v.odometer??0,'number','required min="0" max="9999999" step="1"','建立管理紀錄時的里程，作為成本計算基準。');
   const registration=field('引擎號碼','engineNumber',v.engineNumber,'text','maxlength="60"')+field('車身號碼／VIN','vin',v.vin,'text','maxlength="30"')+field('出廠日期','manufactureDate',v.manufactureDate,'date')+field('初次領牌日期','registrationDate',v.registrationDate,'date')+field('購車日期','purchaseDate',v.purchaseDate,'date');
@@ -218,7 +223,7 @@ async function action(name){try{switch(name){case 'vehicle':editVehicle();break;
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tab){switchTab(b.dataset.tab);return;}if(b.dataset.action){void action(b.dataset.action);return;}if(b.dataset.newType){editRecord(null,b.dataset.newType);return;}if(b.dataset.editRecord){editRecord(b.dataset.editRecord);return;}if(b.dataset.editVehicle){editVehicle(b.dataset.editVehicle);return;}if(b.dataset.editReminder){editReminder(b.dataset.editReminder);return;}if(b.dataset.resolveReminder){resolveReminder(b.dataset.resolveReminder);return;}if(b.dataset.selectVehicle){selected=b.dataset.selectVehicle;switchTab('dashboard');}});
 document.addEventListener('change',async e=>{const t=e.target;if(t.matches('[data-vehicle-select]')){selected=t.value;render();}if(t.id==='type-filter'){filterType=t.value;render();}if(t.id==='from-date'){from=t.value;render();}if(t.id==='to-date'){to=t.value;render();}if(t.id==='import-file'){try{const file=t.files[0];if(!file)return;if(file.size>20000000)throw new Error('備份檔不可大於 20 MB');importState(JSON.parse(await file.text()));}catch(err){toast('匯入失敗：'+err.message);}t.value='';}});
 document.addEventListener('input',e=>{const t=e.target;if(t.id==='record-search'){if(e.isComposing)return;const start=t.selectionStart;query=t.value;render();$('#record-search').focus();$('#record-search').setSelectionRange(start,start);}if(['unitPrice','liters'].includes(t.name)){const price=$('[name=unitPrice]'),liters=$('[name=liters]');if(price?.value&&liters?.value)$('[name=cost]').value=(Number(price.value)*Number(liters.value)).toFixed(2);}if(['parts','labor'].includes(t.name))$('[name=cost]').value=(Number($('[name=parts]').value)+Number($('[name=labor]').value)).toFixed(2);});
-$('#editor-form').addEventListener('submit',e=>editing?.collection==='resolution'?saveResolution(e):saveForm(e));$('#close-dialog').addEventListener('click',()=>$('#editor').close());$('#account-button').addEventListener('click',()=>account?switchTab('settings'):void action('login'));$('#editor').addEventListener('click',e=>{if(e.target!==e.currentTarget)return;const rect=e.currentTarget.getBoundingClientRect();if(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom)e.currentTarget.close();});$('#sync-button').addEventListener('click',()=>void action('sync'));
+$('#editor-form').addEventListener('submit',e=>editing?.collection==='resolution'?saveResolution(e):saveForm(e));$('#close-dialog').addEventListener('click',()=>$('#editor').close());$('#account-button').addEventListener('click',()=>account?switchTab('settings'):void action('login'));$('#editor').addEventListener('cancel',e=>e.preventDefault());$('#sync-button').addEventListener('click',()=>void action('sync'));
 window.addEventListener('hashchange',()=>{if(location.hash==='#main')return;currentTab=location.hash.slice(1)||'dashboard';if(!navs.some(x=>x[0]===currentTab))currentTab='dashboard';render();});
 window.addEventListener('online',()=>{toast('網路已連線');void sync.sync();});window.addEventListener('offline',()=>{syncState='local';syncMessage='離線 · 已儲存本機';renderStatus();});
 window.addEventListener('focus',()=>void sync.sync());document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync.sync();});

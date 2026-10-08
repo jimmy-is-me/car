@@ -68,7 +68,7 @@ export function validateState(value) {
     if(x.deleted) continue;
     if(k==='vehicles' && (typeof x.name!=='string' || !x.name.trim() || !num(x.odometer))) throw new Error('車輛資料錯誤');
     if(k==='vehicles' && x.photo && (typeof x.photo!=='string' || !/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(x.photo) || x.photo.length>300000)) throw new Error('車輛圖片格式錯誤');
-    if(k==='vehicles' && x.color && !['teal','blue','copper','violet','forest','rose'].includes(x.color)) throw new Error('車輛主題色錯誤');
+    if(k==='vehicles' && x.color && !['teal','blue','copper','violet','forest','rose','slate','graphite','black','silver','gold'].includes(x.color)) throw new Error('車輛主題色錯誤');
     if(k!=='vehicles' && !identifier(x.vehicleId)) throw new Error('缺少車輛識別碼');
     if(k==='records' && (!['fuel','charge','maintenance','expense','trip','odometer','tax','insurance','tire','inflation','battery'].includes(x.type) || !dateOk(x.date) || !num(x.cost) || !num(x.odometer))) throw new Error('紀錄欄位錯誤');
     if(k==='records' && x.type==='fuel' && (!num(x.liters) || x.liters<=0 || typeof x.full!=='boolean' || typeof x.missed!=='boolean')) throw new Error('加油資料錯誤');
