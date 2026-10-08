@@ -14,3 +14,10 @@ test('backup rejects unsupported and invalid data',()=>{assert.throws(()=>valida
 test('CSV escapes quotes and formula injection',()=>{assert.equal(csvCell('=1+1'),'"\'=1+1"');assert.equal(csvCell('a"b'),'"a""b"');});
 test('service schedule respects calendar month ends and either due threshold',()=>{assert.equal(addMonths('2026-01-31',1),'2026-02-28');assert.deepEqual(nextServiceDue({date:'2026-01-31',odometer:75000,intervalMonths:6,intervalKm:10000}),{dueDate:'2026-07-31',dueKm:85000});assert.equal(reminderStatus({dueDate:'2026-07-31',dueKm:85000},85000,'2026-06-01'),'overdue');});
 test('tax insurance and tire records validate as first-class entries',()=>{const state=emptyState();for(const type of ['tax','insurance','tire','inflation','battery'])state.records.push({id:type,revision:'rev',updatedAt:1,type,vehicleId:'v',date:'2026-10-08',cost:0,odometer:75000});assert.deepEqual(validateState(state),state);});
+test('vehicle color and compressed photo survive backup validation',()=>{
+  const state=emptyState();
+  state.vehicles.push({id:'car2',revision:'rev',updatedAt:1,name:'第二台車',odometer:500,color:'blue',photo:'data:image/jpeg;base64,/9j/'});
+  state.records.push({id:'reading',revision:'rev',updatedAt:2,type:'odometer',vehicleId:'car2',date:'2026-10-08',cost:0,odometer:900});
+  assert.deepEqual(validateState(state),state);
+  assert.throws(()=>validateState({...state,vehicles:[{...state.vehicles[0],photo:'data:image/svg+xml;base64,AAAA'}]}),/圖片格式/);
+});

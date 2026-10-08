@@ -1,4 +1,4 @@
-const CACHE='car-manager-v1.1.0';
+const CACHE='car-manager-v1.2.0';
 const ASSETS=['./','./index.html','./styles.css','./app.js','./core.js','./store.js','./sync.js','./privacy.html','./manifest.webmanifest','./assets/favicon.ico','./assets/favicon-48x48.png','./assets/apple-touch-icon.png','./assets/android-chrome-192x192.png','./assets/android-chrome-512x512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('car-manager-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
