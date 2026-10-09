@@ -16,6 +16,9 @@
 /core.js
   Cache-Control: no-store, max-age=0
 
+/receipt.js
+  Cache-Control: no-store, max-age=0
+
 /store.js
   Cache-Control: no-store, max-age=0
 

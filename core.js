@@ -23,6 +23,7 @@ export function fuelStats(records) {
   const rows = records.filter(r => !r.deleted && r.type === 'fuel').sort((a,b) => a.date.localeCompare(b.date) || a.odometer-b.odometer || String(a.id).localeCompare(String(b.id)));
   let anchor = null, liters = 0; const intervals = [];
   for (const r of rows) {
+    if(r.odometerEstimated || !Number(r.liters)){anchor=null;liters=0;continue;}
     if (r.missed) { anchor = null; liters = 0; }
     if (!anchor) { if(r.full) anchor = r; continue; }
     if (r.odometer <= anchor.odometer) { anchor = r.full ? r : null; liters = 0; continue; }
@@ -71,7 +72,7 @@ export function validateState(value) {
     if(k==='vehicles' && x.color && !['teal','blue','copper','violet','forest','rose','slate','graphite','black','silver','gold'].includes(x.color)) throw new Error('車輛主題色錯誤');
     if(k!=='vehicles' && !identifier(x.vehicleId)) throw new Error('缺少車輛識別碼');
     if(k==='records' && (!['fuel','charge','maintenance','expense','trip','odometer','tax','insurance','tire','inflation','battery'].includes(x.type) || !dateOk(x.date) || !num(x.cost) || !num(x.odometer))) throw new Error('紀錄欄位錯誤');
-    if(k==='records' && x.type==='fuel' && (!num(x.liters) || x.liters<=0 || typeof x.full!=='boolean' || typeof x.missed!=='boolean')) throw new Error('加油資料錯誤');
+    if(k==='records' && x.type==='fuel' && (!num(x.liters) || (x.liters===0 && x.cost===0) || typeof x.full!=='boolean' || typeof x.missed!=='boolean' || (x.odometerEstimated!==undefined && typeof x.odometerEstimated!=='boolean'))) throw new Error('加油資料錯誤');
     if(k==='records' && x.type==='charge' && (!num(x.kwh) || x.kwh<=0)) throw new Error('充電資料錯誤');
     if(k==='records' && x.type==='trip' && (!num(x.distance) || x.distance<=0)) throw new Error('行程資料錯誤');
     if(k==='records' && x.type==='maintenance' && (!Array.isArray(x.items) || !x.items.length || x.items.some(v=>typeof v!=='string'))) throw new Error('保養項目格式錯誤');

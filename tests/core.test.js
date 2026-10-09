@@ -4,6 +4,14 @@ import {emptyState,fuelStats,mergeStates,reminderStatus,validateState,csvCell,ad
 const fuel=(id,odometer,liters,full=true,missed=false)=>({id,date:'2026-10-01',type:'fuel',odometer,liters,full,missed});
 test('full tank calculation excludes first fill and accumulates partial fills',()=>{const s=fuelStats([fuel('a',1000,40),fuel('b',1200,15,false),fuel('c',1500,25)]);assert.equal(s.kmL,12.5);assert.equal(s.l100,8);assert.equal(s.distance,500);});
 test('single or partial fill cannot produce an economy estimate',()=>{assert.equal(fuelStats([fuel('a',1000,30)]).kmL,null);assert.equal(fuelStats([fuel('a',1000,30,false),fuel('b',1400,30)]).kmL,null);});
+test('fuel expense without measured liters or odometer does not invent economy',()=>{
+  const a={...fuel('a',1000,30),date:'2026-10-01'};
+  const costOnly={...fuel('b',1000,0),date:'2026-10-02',cost:500,odometerEstimated:true};
+  const c={...fuel('c',1500,40),date:'2026-10-03'};
+  assert.equal(fuelStats([a,costOnly,c]).kmL,null);
+  const state=emptyState();state.records.push({...costOnly,revision:'rev',updatedAt:1,vehicleId:'v'});
+  assert.deepEqual(validateState(state),state);
+});
 test('missed fills reset the anchor',()=>{const s=fuelStats([fuel('a',1000,30),fuel('b',1400,35,true,true),fuel('c',1800,40)]);assert.equal(s.intervals.length,1);assert.equal(s.kmL,10);});
 test('economy is weighted by distance and total fuel',()=>{const s=fuelStats([fuel('a',1000,30),fuel('b',1400,40),fuel('c',2000,30)]);assert.equal(s.kmL,1000/70);});
 test('different vehicles are passed as isolated records and equal odometer is not estimated',()=>{assert.equal(fuelStats([fuel('a',1000,30),fuel('b',1000,30)]).kmL,null);});
